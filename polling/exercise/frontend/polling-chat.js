@@ -39,8 +39,13 @@ async function getNewMsgs() {
   try {
     const res = await fetch("/poll");
     json = await res.json();
+
+    if (res.status >= 400) {
+      throw new Error("request did not succeed: ", res.status);
+    }
   } catch (e) {
     console.error("polling error", e);
+    faildTries++;
   }
 
   allChat = json.msg;
@@ -62,11 +67,12 @@ const template = (user, msg) =>
 
 // make the first request
 let timeToMakeNextRequest = 0;
-
+let faildTries = 0;
+const BACKOFF = 5000;
 async function rafTimer(time) {
   if (timeToMakeNextRequest <= time) {
     await getNewMsgs();
-    timeToMakeNextRequest = time + INTERVAL;
+    timeToMakeNextRequest = time + INTERVAL + faildTries * BACKOFF;
   }
   requestAnimationFrame(rafTimer);
 }
